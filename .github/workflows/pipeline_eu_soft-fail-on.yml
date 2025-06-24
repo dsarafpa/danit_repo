@@ -47,6 +47,6 @@ jobs:
           --repo-id ${{github.repository}} \
           --branch ${{github.ref_name}} \
           --source 'GITHUB_ACTIONS' \
-          --soft-fail-on SOFT_FAIL_ON
+          --soft-fail SOFT_FAIL_ON
       
           
