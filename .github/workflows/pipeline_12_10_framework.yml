@@ -47,4 +47,4 @@ jobs:
           --repo-id ${{github.repository}} \
           --branch ${{github.ref_name}} \
           --source 'GITHUB_ACTIONS' \
-          --create-repo-if-missing
+          --framework TERRAFORM
