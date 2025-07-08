@@ -46,6 +46,6 @@ jobs:
           --directory /home/code \
           --repo-id ${{github.repository}} \
           --branch ${{github.ref_name}} \
-          --source 'GITHUB_ACTIONS' \
-          --compact TRUE 
+          --source 'GITHUB_ACTIONS' 
+           
           
