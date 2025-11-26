@@ -4,7 +4,6 @@ name: Cortex CLI Code Scan
 on:
   push:
     branches:
-      - main
       - dsarafpa/new-branch
   workflow_dispatch:
 
