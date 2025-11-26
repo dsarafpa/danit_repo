@@ -4,7 +4,7 @@ name: Cortex CLI Code Scan
 on:
   push:
     branches:
-      - main
+      - dsarafpa/new-branch
   workflow_dispatch:
 
 env:
@@ -48,6 +48,6 @@ jobs:
           code scan \
           --directory "${{github.workspace}}" \
           --repo-id "${{github.repository}}" \
-          --branch "${{github.ref_name}}" \
+          --branch "dsarafpa/new-branch" \
           --source "GITHUB_ACTIONS" \
           --create-repo-if-missing
