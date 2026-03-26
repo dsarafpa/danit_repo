@@ -1,22 +1,24 @@
-version: 2.1
-jobs:
-  cortex-code-scan:
-  docker:
-      - image: cimg/node:22.17.0  # Replace with a suitable image or executor
+   version: 2.1
+   jobs:
+    cortex-code-scan:
+    docker:
+      - image: cimg/node:22.17.0
     environment:
       CORTEX_API_URL: https://api-viso-6dbtdlvrs8c3umu28rcarx.xdr-qa2-uat.us.paloaltonetworks.com
     steps:
       - checkout
-
       - run:
           name: Download cortexcli
           command: |
             set -x
-            crtx_resp=$(curl "${CORTEX_API_URL}/public_api/v1/unified-cli/releases/download-link?os=linux&architecture=amd64" \
+            # Fetch the signed download URL
+            crtx_resp=$(curl -s "${CORTEX_API_URL}/public_api/v1/unified-cli/releases/download-link?os=linux&architecture=amd64" \
               -H "x-xdr-auth-id: ${CORTEX_API_KEY_ID}" \
               -H "Authorization: ${CORTEX_API_KEY}")
+            
+            # Extract URL using jq and download the binary
             crtx_url=$(echo $crtx_resp | jq -r ".signed_url")
-            curl -o cortexcli $crtx_url
+            curl -sL -o cortexcli "$crtx_url"
             chmod +x cortexcli
             ./cortexcli --version
 
@@ -33,8 +35,9 @@ jobs:
               --branch "${CIRCLE_BRANCH}" \
               --source "CIRCLE_CI" \
               --create-repo-if-missing
-workflows:
-  cortex-scan-workflow:
+
+   workflows:
+     cortex-scan-workflow:
     jobs:
-      - cortex-code-scan:
-          context: cortex-secrets
+      - cortex-code-scane-scan:
+        context: cortex-secrets
