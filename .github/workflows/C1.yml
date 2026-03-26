@@ -1,53 +1,40 @@
-
-name: Cortex CLI Code Scan
-
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
-
-env:
-  CORTEX_API_KEY: ${{secrets.CORTEX_API_KEY}}
-  CORTEX_API_KEY_ID: ${{secrets.CORTEX_API_KEY_ID}}
-  CORTEX_API_URL: https://api-viso-incnat27pa9zr9wvl7d6mf.xdr-qa2-uat.us.paloaltonetworks.com
-  
+version: 2.1
 jobs:
   cortex-code-scan:
-    runs-on: ubuntu-latest
-
+    docker:
+      - image: cimg/node:22.17.0  # Replace with a suitable image or executor
+    environment:
+      CORTEX_API_URL: https://api-viso-6dbtdlvrs8c3umu28rcarx.xdr-qa2-uat.us.paloaltonetworks.com
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v2
-    
-    - name: Set up Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: 22
+      - checkout
 
-    - name: Verify Node.js Version
-      run: node -v
+      - run:
+          name: Download cortexcli
+          command: |
+            set -x
+            crtx_resp=$(curl "${CORTEX_API_URL}/public_api/v1/unified-cli/releases/download-link?os=linux&architecture=amd64" \
+              -H "x-xdr-auth-id: ${CORTEX_API_KEY_ID}" \
+              -H "Authorization: ${CORTEX_API_KEY}")
+            crtx_url=$(echo $crtx_resp | jq -r ".signed_url")
+            curl -o cortexcli $crtx_url
+            chmod +x cortexcli
+            ./cortexcli --version
 
-    - name: Download cortexcli
-      run: |
-        set -x
-        crtx_resp=$(curl "${CORTEX_API_URL}/public_api/v1/unified-cli/releases/download-link?os=linux&architecture=amd64" \
-          -H "x-xdr-auth-id: ${CORTEX_API_KEY_ID}" \
-          -H "Authorization: ${CORTEX_API_KEY}")
-        crtx_url=$(echo $crtx_resp | jq -r ".signed_url")
-        curl -o cortexcli $crtx_url
-        chmod +x cortexcli
-        ./cortexcli --version
-
-    - name: Run Cortex CLI Code Scan
-      run: |
-        ./cortexcli \
-          --api-base-url "${CORTEX_API_URL}" \
-          --api-key "${CORTEX_API_KEY}" \
-          --api-key-id "${CORTEX_API_KEY_ID}" \
-          code scan \
-          --directory "${{github.workspace}}" \
-          --repo-id "${{github.repository}}" \
-          --branch "${{github.ref_name}}" \
-          --source "GITHUB_ACTIONS" \
-          --create-repo-if-missing
+      - run:
+          name: Run Cortex CLI Code Scan
+          command: |
+            ./cortexcli \
+              --api-base-url "${CORTEX_API_URL}" \
+              --api-key "${CORTEX_API_KEY}" \
+              --api-key-id "${CORTEX_API_KEY_ID}" \
+              code scan \
+              --directory "$(pwd)" \
+              --repo-id "${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" \
+              --branch "${CIRCLE_BRANCH}" \
+              --source "CIRCLE_CI" \
+              --create-repo-if-missing
+workflows:
+  cortex-scan-workflow:
+    jobs:
+      - cortex-code-scan:
+          context: cortex-secrets
