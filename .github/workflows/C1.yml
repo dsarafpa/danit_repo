@@ -1,43 +1,53 @@
-   version: 2.1
-   jobs:
-    cortex-code-scan:
-    docker:
-      - image: cimg/node:22.17.0
-    environment:
-      CORTEX_API_URL: https://api-viso-6dbtdlvrs8c3umu28rcarx.xdr-qa2-uat.us.paloaltonetworks.com
+
+name: Cortex CLI Code Scan
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  CORTEX_API_KEY: ${{secrets.CORTEX_API_KEY}}
+  CORTEX_API_KEY_ID: ${{secrets.CORTEX_API_KEY_ID}}
+  CORTEX_API_URL: https://api-viso-ehuqyn9kqmxxruqafjdtoz.xdr-qa2-uat.us.paloaltonetworks.com
+  
+jobs:
+  cortex-code-scan:
+    runs-on: ubuntu-latest
+
     steps:
-      - checkout
-      - run:
-          name: Download cortexcli
-          command: |
-            set -x
-            # Fetch the signed download URL
-            crtx_resp=$(curl -s "${CORTEX_API_URL}/public_api/v1/unified-cli/releases/download-link?os=linux&architecture=amd64" \
-              -H "x-xdr-auth-id: ${CORTEX_API_KEY_ID}" \
-              -H "Authorization: ${CORTEX_API_KEY}")
-            
-            # Extract URL using jq and download the binary
-            crtx_url=$(echo $crtx_resp | jq -r ".signed_url")
-            curl -sL -o cortexcli "$crtx_url"
-            chmod +x cortexcli
-            ./cortexcli --version
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+    
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 22
 
-      - run:
-          name: Run Cortex CLI Code Scan
-          command: |
-            ./cortexcli \
-              --api-base-url "${CORTEX_API_URL}" \
-              --api-key "${CORTEX_API_KEY}" \
-              --api-key-id "${CORTEX_API_KEY_ID}" \
-              code scan \
-              --directory "$(pwd)" \
-              --repo-id "${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}" \
-              --branch "${CIRCLE_BRANCH}" \
-              --source "CIRCLE_CI" \
-              --create-repo-if-missing
+    - name: Verify Node.js Version
+      run: node -v
 
-   workflows:
-     cortex-scan-workflow:
-    jobs:
-      - cortex-code-scane-scan:
-        context: cortex-secrets
+    - name: Download cortexcli
+      run: |
+        set -x
+        crtx_resp=$(curl "${CORTEX_API_URL}/public_api/v1/unified-cli/releases/download-link?os=linux&architecture=amd64" \
+          -H "x-xdr-auth-id: ${CORTEX_API_KEY_ID}" \
+          -H "Authorization: ${CORTEX_API_KEY}")
+        crtx_url=$(echo $crtx_resp | jq -r ".signed_url")
+        curl -o cortexcli $crtx_url
+        chmod +x cortexcli
+        ./cortexcli --version
+
+    - name: Run Cortex CLI Code Scan
+      run: |
+        ./cortexcli \
+          --api-base-url "${CORTEX_API_URL}" \
+          --api-key "${CORTEX_API_KEY}" \
+          --api-key-id "${CORTEX_API_KEY_ID}" \
+          code scan \
+          --directory "${{github.workspace}}" \
+          --repo-id "${{github.repository}}" \
+          --branch "${{github.ref_name}}" \
+          --source "GITHUB_ACTIONS" \
+          --create-repo-if-missing
